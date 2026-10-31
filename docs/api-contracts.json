@@ -1,0 +1,16 @@
+{
+  "knowledgeItemCreate": {
+    "type": "FIELD_NOTE",
+    "title": "Compressor 07 pressure oscillation at ambient 5C",
+    "summary": "Oscillation resolved by reseating valve and warming line",
+    "body": "Observed only on morning startup. Check valve stem sticking under low temp.",
+    "taskCode": "T_HOT_START_DIAG",
+    "symptomCode": "S_FLUCTUATING_PRESSURE",
+    "assetCode": "CMP-07",
+    "source": "DIRECT_EXPERIENCE"
+  },
+  "reviewDecision": {
+    "decision": "APPROVE",
+    "comments": "Validated on two additional shifts. Add torque range note."
+  }
+}

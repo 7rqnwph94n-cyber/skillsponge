@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 40% 98%;
+  --foreground: 215 33% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 33% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 33% 12%;
+  --primary: 155 100% 21%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 16% 90%;
+  --secondary-foreground: 215 33% 12%;
+  --muted: 210 16% 94%;
+  --muted-foreground: 215 15% 40%;
+  --accent: 208 70% 14%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 357 95% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 215 20% 80%;
+  --input: 215 20% 80%;
+  --ring: 155 100% 21%;
+  --radius: 0.85rem;
+}
+
+.dark {
+  --background: 216 40% 10%;
+  --foreground: 210 40% 98%;
+  --card: 216 40% 14%;
+  --card-foreground: 210 40% 98%;
+  --popover: 216 40% 14%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 155 100% 28%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 215 25% 24%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 215 25% 20%;
+  --muted-foreground: 214 16% 72%;
+  --accent: 208 70% 18%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 357 95% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 215 20% 30%;
+  --input: 215 20% 30%;
+  --ring: 155 100% 35%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "IBM Plex Sans", "Segoe UI", "Arial", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(10, 37, 64, 0.08), transparent 32rem),
+      radial-gradient(circle at 100% 0%, rgba(0, 107, 63, 0.08), transparent 28rem);
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    @apply text-base;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)];
+  }
+
+  .app-shell-bg {
+    background-image:
+      linear-gradient(180deg, rgba(10, 37, 64, 0.04), rgba(10, 37, 64, 0)),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 48px,
+        rgba(15, 23, 42, 0.035) 48px,
+        rgba(15, 23, 42, 0.035) 49px
+      );
+  }
+
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .status-draft {
+    @apply bg-amber-500 text-slate-950;
+  }
+
+  .status-review {
+    @apply bg-blue-600 text-white;
+  }
+
+  .status-approved {
+    @apply bg-green-600 text-white;
+  }
+
+  .status-changes {
+    @apply bg-red-600 text-white;
+  }
+}

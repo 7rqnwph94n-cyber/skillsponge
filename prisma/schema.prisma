@@ -1,0 +1,348 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum KnowledgeRecordType {
+  PROCEDURE
+  FIELD_NOTE
+  FAILURE_PATTERN
+  LESSON_LEARNED
+  EXPERT_INTERVIEW
+  SHADOWING_RECORD
+}
+
+enum ApprovalState {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum ConfidenceLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AppRole {
+  TECHNICIAN
+  SENIOR_TECHNICIAN
+  SUPERVISOR
+  REVIEWER
+  ADMIN
+}
+
+enum JobLogStatus {
+  OPEN
+  IN_PROGRESS
+  SUBMITTED
+  REVIEWED
+  CLOSED
+}
+
+enum JobLogEntryType {
+  NOTE
+  VOICE_TRANSCRIPTION
+  OBSERVATION
+  ACTION_TAKEN
+  ISSUE_FOUND
+}
+
+enum ProcedureScope {
+  GENERIC
+  MODEL_SPECIFIC
+  VARIANT_SPECIFIC
+}
+
+model AppUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  displayName  String
+  role         AppRole
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authoredAuditEvents AuditEvent[] @relation("auditActor")
+}
+
+model ExpertProfile {
+  id                   String         @id @default(cuid())
+  name                 String
+  roleFocus            String
+  domains              String[]
+  assets               String[]
+  yearsExperience      Int            @default(0)
+  retirementWindowStart DateTime?
+  retirementWindowEnd  DateTime?
+  riskLevel            String         @default("MEDIUM")
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  handoverPacks        HandoverPack[]
+  sourcedRecords       KnowledgeRecord[]
+
+  @@index([riskLevel])
+  @@index([retirementWindowEnd])
+}
+
+model HandoverPack {
+  id             String         @id @default(cuid())
+  expertProfileId String
+  targetRole     String
+  status         String         @default("IN_PROGRESS")
+  targetDate     DateTime?
+  coverageScore  Int            @default(0)
+  validatedCount Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  expertProfile  ExpertProfile  @relation(fields: [expertProfileId], references: [id], onDelete: Cascade)
+  tasks          HandoverTask[]
+  linkedRecords  KnowledgeRecord[]
+
+  @@index([expertProfileId])
+  @@index([status])
+  @@index([targetDate])
+}
+
+model HandoverTask {
+  id            String        @id @default(cuid())
+  handoverPackId String
+  title         String
+  status        String        @default("OPEN")
+  assigneeName  String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  handoverPack  HandoverPack  @relation(fields: [handoverPackId], references: [id], onDelete: Cascade)
+
+  @@index([handoverPackId])
+  @@index([status])
+}
+
+model KnowledgeRecord {
+  id              String              @id @default(cuid())
+  type            KnowledgeRecordType
+  title           String
+  summary         String
+  body            String
+  author          String
+  reviewer        String?
+  sourceExpertId  String?
+  handoverPackId  String?
+  approvalState   ApprovalState       @default(DRAFT)
+  confidence      ConfidenceLevel     @default(MEDIUM)
+  asset           String
+  system          String
+  task            String
+  symptom         String
+  environment     String
+  scope           ProcedureScope?
+  tags            String[]
+  typePayload     Json?
+  currentVersion  Int                 @default(1)
+  lastValidatedAt DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  relatedFrom     KnowledgeRelation[] @relation("fromRecord")
+  relatedTo       KnowledgeRelation[] @relation("toRecord")
+  auditEvents     AuditEvent[]
+  versions        KnowledgeRecordVersion[]
+  sourceExpert    ExpertProfile?      @relation(fields: [sourceExpertId], references: [id], onDelete: SetNull)
+  handoverPack    HandoverPack?       @relation(fields: [handoverPackId], references: [id], onDelete: SetNull)
+
+  @@index([approvalState])
+  @@index([type])
+  @@index([asset])
+  @@index([system])
+  @@index([task])
+  @@index([symptom])
+  @@index([scope])
+  @@index([createdAt])
+  @@index([sourceExpertId])
+  @@index([handoverPackId])
+}
+
+model KnowledgeRecordVersion {
+  id                String          @id @default(cuid())
+  knowledgeRecordId String
+  versionNumber     Int
+  editedBy          String
+  changeNote        String?
+  changeReason      String?
+  snapshot          Json
+  createdAt         DateTime        @default(now())
+
+  knowledgeRecord   KnowledgeRecord @relation(fields: [knowledgeRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([knowledgeRecordId, versionNumber])
+  @@index([knowledgeRecordId, createdAt])
+}
+
+model KnowledgeRelation {
+  id           String          @id @default(cuid())
+  fromRecordId String
+  toRecordId   String
+  relationType String          @default("RELATED")
+  createdAt    DateTime        @default(now())
+
+  fromRecord   KnowledgeRecord @relation("fromRecord", fields: [fromRecordId], references: [id], onDelete: Cascade)
+  toRecord     KnowledgeRecord @relation("toRecord", fields: [toRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([fromRecordId, toRecordId, relationType])
+  @@index([fromRecordId])
+  @@index([toRecordId])
+}
+
+model AuditEvent {
+  id                String          @id @default(cuid())
+  knowledgeRecordId String
+  actorUserId       String?
+  actorName         String
+  actorRole         AppRole?
+  eventType         String
+  fromStatus        ApprovalState?
+  toStatus          ApprovalState?
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+
+  knowledgeRecord   KnowledgeRecord @relation(fields: [knowledgeRecordId], references: [id], onDelete: Cascade)
+  actorUser         AppUser?        @relation("auditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([knowledgeRecordId, createdAt])
+  @@index([eventType])
+}
+
+// ─── Job Log System ─────────────────────────────────────────
+
+model JobLog {
+  id               String        @id @default(cuid())
+  codeHash         String        @unique
+  jobReference     String        @unique
+  status           JobLogStatus  @default(OPEN)
+
+  customerName     String
+  siteName         String
+  siteAddress      String?
+  siteContactName  String
+  siteContactPhone String?
+  siteContactEmail String?
+
+  asset            String
+  assetSerial      String?
+  assetLocation    String?
+
+  technicianId     String
+  technicianName   String
+
+  startedAt        DateTime      @default(now())
+  completedAt      DateTime?
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+
+  reviewerName     String?
+  reviewNotes      String?
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  entries          JobLogEntry[]
+  photos           JobLogPhoto[]
+  checklists       JobLogChecklist[]
+  auditEvents      JobLogAuditEvent[]
+
+  @@index([status])
+  @@index([technicianId])
+  @@index([asset])
+  @@index([customerName])
+  @@index([createdAt])
+}
+
+model JobLogEntry {
+  id           String          @id @default(cuid())
+  jobLogId     String
+  entryType    JobLogEntryType @default(NOTE)
+  content      String
+  isVoiceInput Boolean         @default(false)
+  authorName   String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  jobLog       JobLog          @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+
+  @@index([jobLogId, createdAt])
+}
+
+model JobLogPhoto {
+  id         String   @id @default(cuid())
+  jobLogId   String
+  storageKey String
+  fileName   String
+  mimeType   String   @default("image/jpeg")
+  sizeBytes  Int      @default(0)
+  caption    String?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  jobLog     JobLog   @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+
+  @@index([jobLogId])
+}
+
+model JobLogAuditEvent {
+  id          String        @id @default(cuid())
+  jobLogId    String
+  actorUserId String?
+  actorName   String
+  actorRole   AppRole?
+  eventType   String
+  fromStatus  JobLogStatus?
+  toStatus    JobLogStatus?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+
+  jobLog      JobLog        @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+
+  @@index([jobLogId, createdAt])
+  @@index([eventType])
+}
+
+model JobLogChecklist {
+  id              String              @id @default(cuid())
+  jobLogId        String
+  procedureId     String
+  procedureTitle  String
+  createdAt       DateTime            @default(now())
+
+  jobLog          JobLog              @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+  items           JobLogChecklistItem[]
+
+  @@index([jobLogId])
+}
+
+model JobLogChecklistItem {
+  id           String          @id @default(cuid())
+  checklistId  String
+  stepIndex    Int
+  content      String
+  checked      Boolean         @default(false)
+  checkedAt    DateTime?
+  checkedBy    String?
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  checklist    JobLogChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+}
